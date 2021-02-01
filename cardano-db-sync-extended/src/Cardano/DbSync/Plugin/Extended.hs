@@ -2,8 +2,9 @@ module Cardano.DbSync.Plugin.Extended
   ( extendedDbSyncNodePlugin
   ) where
 
-
-import           Cardano.DbSync (DbSyncNodePlugin (..), defDbSyncNodePlugin)
+import qualified Cardano.Db as DB
+import           Cardano.Sync (DbSyncNodePlugin (..))
+import           Cardano.DbSync.Plugin.Default (defDbSyncNodePlugin)
 import           Cardano.DbSync.Plugin.Epoch (epochPluginInsertBlock, epochPluginOnStartup,
                    epochPluginRollbackBlock)
 
@@ -12,10 +13,12 @@ extendedDbSyncNodePlugin =
   defDbSyncNodePlugin
     { plugOnStartup =
         plugOnStartup defDbSyncNodePlugin
-          ++ [epochPluginOnStartup]
+          ++ [\tracer -> fmap Right $ DB.runDbAction (Just tracer) $ epochPluginOnStartup tracer]
+
     , plugInsertBlock =
         plugInsertBlock defDbSyncNodePlugin
-          ++ [epochPluginInsertBlock]
+          ++ [\tracer env ledgerStateVar blockDetails -> DB.runDbAction (Just tracer) $ epochPluginInsertBlock tracer env ledgerStateVar blockDetails]
+
     , plugRollbackBlock =
         plugRollbackBlock defDbSyncNodePlugin
           ++ [epochPluginRollbackBlock]
